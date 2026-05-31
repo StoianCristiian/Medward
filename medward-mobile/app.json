@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "name": "medward-mobile",
+    "slug": "medward-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "package": "com.stoiancristian.medward",
+      "usesCleartextTraffic": true,
+      "permissions": [
+        "android.permission.health.READ_HEART_RATE"
+      ],
+      "intentFilters": [
+        {
+          "action": "androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE",
+          "category": [
+            "android.intent.category.DEFAULT"
+          ]
+        }
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-health-connect",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "48f69806-814c-4796-968e-2a41a49693bb"
+      }
+    }
+  }
+}

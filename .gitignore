@@ -1,0 +1,18 @@
+# Configurații specifice editoarelor de cod
+.vscode/
+.idea/
+
+# Fisiere specifice sistemului de operare
+.DS_Store
+Thumbs.db
+
+# Orice alt enviroment ascuns
+.env
+
+# Agenții AI (ex. Claude, Copilot local)
+.claude/
+.cursor/
+*.instructions.md
+*.prompt.md
+AGENTS.md
+CLAUDE.md
