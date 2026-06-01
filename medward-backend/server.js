@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const connectDB = require('./src/infrastructure/database/mongooseConnection');
+const authRoutes = require('./src/infrastructure/routes/authRoutes');
 const heartRateRoutes = require('./src/infrastructure/routes/heartRateRoutes');
 
 const app = express();
@@ -20,6 +21,7 @@ app.get('/', (req, res) => {
 });
 
 // Folosim rutele decuplate
+app.use('/api/auth', authRoutes);
 app.use('/api/vitals', heartRateRoutes);
 
 // Pornește serverul

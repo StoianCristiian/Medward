@@ -2,6 +2,10 @@
   "expo": {
     "name": "medward-mobile",
     "slug": "medward-mobile",
+    "scheme": [
+      "medward",
+      "com.stoiancristian.medward"
+    ],
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -42,7 +46,9 @@
             "minSdkVersion": 26
           }
         }
-      ]
+      ],
+      "expo-web-browser",
+      "@react-native-google-signin/google-signin"
     ],
     "extra": {
       "eas": {
