@@ -6,7 +6,7 @@ class SyncHeartRateData {
 
     async execute(onLog) {
         try {
-            onLog('Se verifică permisiunile...');
+            onLog('Se verifică permisiunile (Pacient)...');
             await this.healthDataRepository.requestPermissions();
             
             onLog('Permisiuni acordate. Se citesc datele locale...');
@@ -16,14 +16,36 @@ class SyncHeartRateData {
 
             const records = await this.healthDataRepository.getHeartRateRecords(startTime, endTime);
 
-            onLog(`🔍 Am găsit ${records.length} înregistrări de puls pe telefon.`);
+            onLog(`🔍 Am găsit ${records.length} de seturi-rădăcină (puls) pe telefon.`);
 
             if (records.length === 0) {
                 return { success: true, message: 'Nu sunt date noi de sincronizat.' };
             }
 
-            onLog('Se trimit datele către server...');
-            const response = await this.backendRepository.sendHeartRateData(records);
+            // Normalizăm datele pentru a corespunde modelului generic Time-Series de pe Backend (VitalSign)
+            const vitals = [];
+            records.forEach(record => {
+                // Structura poate veni cu samples sau direct cu atribute în funcție de payload-ul sistemului Android
+                const samples = record.samples || [record];
+                
+                samples.forEach(sample => {
+                    if (sample.beatsPerMinute) {
+                        vitals.push({
+                            type: 'heart_rate',
+                            value: sample.beatsPerMinute,
+                            unit: 'bpm',
+                            timestamp: sample.time || record.startTime || new Date().toISOString()
+                        });
+                    }
+                });
+            });
+
+            if (vitals.length === 0) {
+                return { success: true, message: 'Nicio înregistrare validă găsită în formatul așteptat.' };
+            }
+
+            onLog(`Trimitem ${vitals.length} măsurători unice spre server (format Time-Series)...`);
+            const response = await this.backendRepository.postVitals(vitals);
 
             onLog(`Server: ${response.message}`);
             return { success: true, message: 'Sincronizare reușită!' };

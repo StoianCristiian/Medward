@@ -32,6 +32,8 @@ export default function LoginScreen({ navigation }) {
 
             if (res.data.success) {
                 await AsyncStorage.setItem('userToken', res.data.token);
+                await AsyncStorage.setItem('userRole', res.data.user.role);
+                // Întrebăm direct navigatorul să decidă ce ecran încarcă mai jos, dar noi redirecționăm către "Home" (care va deveni un dispatcher)
                 navigation.replace('Home');
             }
         } catch (error) {

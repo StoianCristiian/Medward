@@ -43,4 +43,23 @@ router.post('/google', async (req, res) => {
     }
 });
 
+// [Orice User] Rută pentru setarea intenționată a rolului
+const { requireAuth } = require('../middleware/authMiddleware');
+router.post('/set-role', requireAuth, async (req, res) => {
+    try {
+        const { role } = req.body;
+        
+        if (!['patient', 'warden'].includes(role)) {
+            return res.status(400).json({ success: false, message: 'Rol invalid' });
+        }
+
+        req.user.role = role;
+        await req.user.save();
+
+        res.status(200).json({ success: true, role: req.user.role, message: `Rol actualizat la ${role}` });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Eroare la schimbarea rolului' });
+    }
+});
+
 module.exports = router;

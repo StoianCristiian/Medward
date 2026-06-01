@@ -2,7 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const connectDB = require('./src/infrastructure/database/mongooseConnection');
 const authRoutes = require('./src/infrastructure/routes/authRoutes');
-const heartRateRoutes = require('./src/infrastructure/routes/heartRateRoutes');
+const vitalRoutes = require('./src/infrastructure/routes/vitalRoutes');
+const pairingRoutes = require('./src/infrastructure/routes/pairingRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -20,9 +21,10 @@ app.get('/', (req, res) => {
     res.send('Serverul MedWard (Clean Architecture) este online!');
 });
 
-// Folosim rutele decuplate
+// Folosim rutele
 app.use('/api/auth', authRoutes);
-app.use('/api/vitals', heartRateRoutes);
+app.use('/api/vitals', vitalRoutes);
+app.use('/api/pairing', pairingRoutes);
 
 // Pornește serverul
 app.listen(PORT, IP_ADDRESS, () => {

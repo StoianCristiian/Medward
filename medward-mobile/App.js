@@ -4,10 +4,34 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ActivityIndicator, View } from 'react-native';
 
-import HomeScreen from './src/presentation/screens/HomeScreen';
 import LoginScreen from './src/presentation/screens/LoginScreen';
+import RoleSelectionScreen from './src/presentation/screens/RoleSelectionScreen';
+import PatientDashboardScreen from './src/presentation/screens/PatientDashboardScreen';
+import WardenDashboardScreen from './src/presentation/screens/WardenDashboardScreen';
 
 const Stack = createNativeStackNavigator();
+
+function DispatcherScreen({ navigation }) {
+  useEffect(() => {
+    const checkRole = async () => {
+      const role = await AsyncStorage.getItem('userRole');
+      if (!role) {
+        navigation.replace('RoleSelection');
+      } else if (role === 'patient') {
+        navigation.replace('PatientDashboard');
+      } else if (role === 'warden') {
+        navigation.replace('WardenDashboard');
+      }
+    };
+    checkRole();
+  }, []);
+
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1a202c' }}>
+      <ActivityIndicator size="large" color="#3182ce" />
+    </View>
+  );
+}
 
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -39,11 +63,15 @@ export default function App() {
 
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {userToken == null ? (
-          <Stack.Screen name="Login" component={LoginScreen} />
-        ) : null}
-        <Stack.Screen name="Home" component={HomeScreen} />
+      <Stack.Navigator 
+        screenOptions={{ headerShown: false }}
+        initialRouteName={userToken == null ? 'Login' : 'Home'}
+      >
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="Home" component={DispatcherScreen} />
+        <Stack.Screen name="RoleSelection" component={RoleSelectionScreen} />
+        <Stack.Screen name="PatientDashboard" component={PatientDashboardScreen} />
+        <Stack.Screen name="WardenDashboard" component={WardenDashboardScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
