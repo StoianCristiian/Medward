@@ -6,8 +6,8 @@ import { ActivityIndicator, View } from 'react-native';
 
 import LoginScreen from './src/presentation/screens/LoginScreen';
 import RoleSelectionScreen from './src/presentation/screens/RoleSelectionScreen';
-import PatientDashboardScreen from './src/presentation/screens/PatientDashboardScreen';
-import WardenDashboardScreen from './src/presentation/screens/WardenDashboardScreen';
+import PatientTabs from './src/presentation/navigation/PatientTabs';
+import WardenTabs from './src/presentation/navigation/WardenTabs';
 
 const Stack = createNativeStackNavigator();
 
@@ -70,8 +70,8 @@ export default function App() {
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Home" component={DispatcherScreen} />
         <Stack.Screen name="RoleSelection" component={RoleSelectionScreen} />
-        <Stack.Screen name="PatientDashboard" component={PatientDashboardScreen} />
-        <Stack.Screen name="WardenDashboard" component={WardenDashboardScreen} />
+        <Stack.Screen name="PatientDashboard" component={PatientTabs} />
+        <Stack.Screen name="WardenDashboard" component={WardenTabs} />
       </Stack.Navigator>
     </NavigationContainer>
   );

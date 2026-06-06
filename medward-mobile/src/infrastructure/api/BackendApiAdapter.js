@@ -58,6 +58,22 @@ class BackendApiAdapter extends BackendRepository {
         const response = await axios.post(`${BASE_URL}/auth/set-role`, { role }, { headers });
         return response.data;
     }
+
+    // ============================================
+    // Integrare flux tratament
+    // ============================================
+
+    async addTreatment(patientId, formData) {
+        const headers = await this._getHeaders();
+        const response = await axios.post(`${BASE_URL}/treatments`, { ...formData, patientId }, { headers });
+        return response.data;
+    }
+
+    async getTreatments(patientId) {
+        const headers = await this._getHeaders();
+        const response = await axios.get(`${BASE_URL}/treatments/${patientId}`, { headers });
+        return response.data;
+    }
 }
 
 export default BackendApiAdapter;

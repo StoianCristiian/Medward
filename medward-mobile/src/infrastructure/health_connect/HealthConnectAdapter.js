@@ -8,21 +8,28 @@ class HealthConnectAdapter extends HealthDataRepository {
 
     async requestPermissions() {
         return await requestPermission([
-            { recordType: 'HeartRate', accessType: 'read' }
+            { recordType: 'HeartRate', accessType: 'read' },
+            { recordType: 'HeartRateVariabilityRmssd', accessType: 'read' },
+            { recordType: 'RespiratoryRate', accessType: 'read' },
+            { recordType: 'RestingHeartRate', accessType: 'read' },
+            { recordType: 'BodyTemperature', accessType: 'read' }
         ]);
     }
 
-    async getHeartRateRecords(startTime, endTime) {
-        const result = await readRecords('HeartRate', {
-            timeRangeFilter: {
-                operator: 'after',
-                startTime: startTime,
-                endTime: endTime
-            }
-        });
-
-        // Extragem formatele specifice API-ului curent de Health Connect
-        return result.records || result || [];
+    async getRecords(recordType, startTime, endTime) {
+        try {
+            const result = await readRecords(recordType, {
+                timeRangeFilter: {
+                    operator: 'after',
+                    startTime: startTime,
+                    endTime: endTime
+                }
+            });
+            return result.records || result || [];
+        } catch (error) {
+            console.log(`Eroare la citirea ${recordType}:`, error.message);
+            return [];
+        }
     }
 }
 

@@ -4,6 +4,7 @@ const connectDB = require('./src/infrastructure/database/mongooseConnection');
 const authRoutes = require('./src/infrastructure/routes/authRoutes');
 const vitalRoutes = require('./src/infrastructure/routes/vitalRoutes');
 const pairingRoutes = require('./src/infrastructure/routes/pairingRoutes');
+const treatmentRoutes = require('./src/infrastructure/routes/treatmentRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -25,6 +26,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/vitals', vitalRoutes);
 app.use('/api/pairing', pairingRoutes);
+app.use('/api/treatments', treatmentRoutes);
 
 // Pornește serverul
 app.listen(PORT, IP_ADDRESS, () => {
