@@ -28,6 +28,6 @@ app.use('/api/pairing', pairingRoutes);
 
 // Pornește serverul
 app.listen(PORT, IP_ADDRESS, () => {
-    console.log(`🚀 Serverul Clean Architecture rulează pe http://${IP_ADDRESS === '0.0.0.0' ? 'localhost' : IP_ADDRESS}:${PORT}`);
+    console.log(`Serverul rulează pe http://${IP_ADDRESS === '0.0.0.0' ? 'localhost' : IP_ADDRESS}:${PORT}`);
     console.log(`Aștept datele de la telefon...`);
 });

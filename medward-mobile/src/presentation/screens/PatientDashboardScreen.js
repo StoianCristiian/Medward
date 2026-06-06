@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
 
 // Importăm implementările specifice și Use Case-ul
@@ -17,6 +17,9 @@ export default function PatientDashboardScreen({ navigation }) {
     const [codeLoading, setCodeLoading] = useState(false);
     const [logs, setLogs] = useState([]);
     const [pairingCode, setPairingCode] = useState(null);
+    const [isMonitoring, setIsMonitoring] = useState(false);
+
+    const monitoringInterval = useRef(null);
 
     useEffect(() => {
         async function initHealthConnect() {
@@ -32,16 +35,24 @@ export default function PatientDashboardScreen({ navigation }) {
             }
         }
         initHealthConnect();
+
+        // Curățare interval la închiderea ecranului
+        return () => {
+            if (monitoringInterval.current) {
+                clearInterval(monitoringInterval.current);
+            }
+        };
     }, []);
 
     const addLog = (msg) => {
-        setLogs(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
+        setLogs(prev => {
+            const newLogs = [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev];
+            return newLogs.slice(0, 20); // Păstrăm pe ecran maxim 20 cel mai noi jurnale să nu aglomerăm aplicația
+        });
     };
 
     const handleSync = async () => {
         setLoading(true);
-        setLogs([]);
-        
         const result = await syncHeartRateDataUseCase.execute(addLog);
         if (result.success) {
             setStatus('✅ ' + result.message);
@@ -49,6 +60,28 @@ export default function PatientDashboardScreen({ navigation }) {
             setStatus('❌ ' + result.message);
         }
         setLoading(false);
+    };
+
+    const toggleMonitoring = () => {
+        if (isMonitoring) {
+            setIsMonitoring(false);
+            if (monitoringInterval.current) {
+                clearInterval(monitoringInterval.current);
+                monitoringInterval.current = null;
+            }
+            addLog("Monitorizare oprită.");
+        } else {
+            setIsMonitoring(true);
+            addLog("Monitorizare continuă activată. Extragem date noi la fiecare 30 secunde.");
+            
+            // Sincronizare la activare imediată
+            handleSync();
+            
+            // Repetare în fundal (cât timp ecranul e deschis)
+            monitoringInterval.current = setInterval(() => {
+                handleSync();
+            }, 30000);
+        }
     };
 
     const handleGenerateCode = async () => {
@@ -85,11 +118,10 @@ export default function PatientDashboardScreen({ navigation }) {
                 <Text style={styles.statusText}>{status}</Text>
 
                 <TouchableOpacity 
-                    style={[styles.button, loading && styles.buttonDisabled]} 
-                    onPress={handleSync}
-                    disabled={loading}
+                    style={[styles.button, isMonitoring ? styles.stopButton : null]} 
+                    onPress={toggleMonitoring}
                 >
-                    {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Sincronizează Datele</Text>}
+                    <Text style={styles.buttonText}>{isMonitoring ? 'Oprește Monitorizarea' : 'Pornește Monitorizarea'}</Text>
                 </TouchableOpacity>
             </View>
 
@@ -138,6 +170,7 @@ const styles = StyleSheet.create({
     codeContainer: { backgroundColor: '#edf2f7', padding: 15, borderRadius: 8, alignItems: 'center', marginBottom: 15 },
     codeText: { fontSize: 32, fontWeight: 'bold', letterSpacing: 5, color: '#2b6cb0' },
     button: { backgroundColor: '#3182ce', padding: 15, borderRadius: 8, alignItems: 'center' },
+    stopButton: { backgroundColor: '#e53e3e' },
     buttonDisabled: { opacity: 0.7 },
     codeButton: { backgroundColor: '#48bb78' },
     buttonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },

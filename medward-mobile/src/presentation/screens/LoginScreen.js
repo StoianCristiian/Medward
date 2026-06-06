@@ -4,8 +4,8 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
-const IP = process.env.EXPO_PUBLIC_BACKEND_IP || '192.168.0.171';
-const PORT = process.env.EXPO_PUBLIC_BACKEND_PORT || '3000';
+const IP = process.env.EXPO_PUBLIC_BACKEND_IP;
+const PORT = process.env.EXPO_PUBLIC_BACKEND_PORT;
 const BACKEND_LOGIN_URL = `http://${IP}:${PORT}/api/auth/google`;
 
 export default function LoginScreen({ navigation }) {

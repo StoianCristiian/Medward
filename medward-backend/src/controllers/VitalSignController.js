@@ -20,10 +20,30 @@ class VitalSignController {
                 timestamp: new Date(v.timestamp)
             }));
 
-            // Inserare rapidă (bulk) în MongoDB
-            await VitalSignModel.insertMany(vitalsToSave);
+            // Optimizare: Extragem datele preexistente din baza de date folosind timestamps
+            const incomingTimestamps = vitalsToSave.map(v => v.timestamp);
+            const existingRecords = await VitalSignModel.find({
+                patientId,
+                timestamp: { $in: incomingTimestamps }
+            }).select('timestamp type');
 
-            res.status(201).json({ success: true, message: 'Date medicale salvate cu succes' });
+            // Creăm un format HashSet eficient pe combinația `timestamp_tip`
+            const existingSet = new Set(
+                existingRecords.map(r => `${r.timestamp.getTime()}_${r.type}`)
+            );
+
+            // Filtrăm duplicatele păstrând doar cele ce NU sunt în baza de date
+            const newVitalsToSave = vitalsToSave.filter(v => 
+                !existingSet.has(`${v.timestamp.getTime()}_${v.type}`)
+            );
+
+            // Inserare rapidă (bulk) în MongoDB doar a intrărilor cu adevărat noi
+            if (newVitalsToSave.length > 0) {
+                await VitalSignModel.insertMany(newVitalsToSave);
+                res.status(201).json({ success: true, message: `Acum am adăugat ${newVitalsToSave.length} din ${vitals.length} date trimise (s-au exclus duplicatele).` });
+            } else {
+                res.status(200).json({ success: true, message: `Toate cele ${vitals.length} înregistrări erau deja sincronizate.` });
+            }
         } catch (error) {
             console.error('❌ Eroare saveVitals:', error);
             res.status(500).json({ success: false, message: 'Eroare internă a serverului' });
