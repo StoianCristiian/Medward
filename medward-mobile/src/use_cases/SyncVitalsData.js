@@ -4,12 +4,15 @@ class SyncVitalsData {
         this.backendRepository = backendRepository;
     }
 
-    async execute(onLog) {
+    async execute(onLog, isBackground = false) {
         try {
-            onLog('Se verifică permisiunile (Pacient)...');
-            await this.healthDataRepository.requestPermissions();
-            
-            onLog('Permisiuni acordate. Se citesc datele locale...');
+            if (!isBackground) {
+                onLog('Se verifică permisiunile (Pacient)...');
+                await this.healthDataRepository.requestPermissions();
+                onLog('Permisiuni acordate. Se citesc datele locale...');
+            } else {
+                onLog('Sincronizare în fundal. Se presupune că permisiunile sunt gata...');
+            }
             
             const endTime = new Date().toISOString();
             const startTime = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -67,10 +70,51 @@ class SyncVitalsData {
             });
 
             // Ștergem invalide (care au 0 de la mapping failure pt HRV, Temp) // Ajustează logic dacă temp poate fi null
-            const vitals = allVitals.filter(v => v.value !== undefined && v.value !== null && v.value !== 0);
+            let vitals = allVitals.filter(v => v.value !== undefined && v.value !== null && v.value !== 0);
 
+            // GĂSIRE MAXIMUM TIMESTAMP REAL
+            // Verificăm dacă telefonul raportează REA date chiar complet "NOI" prin salvarea in AsyncStorage
+            const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+            const lastLatestStr = await AsyncStorage.getItem('lastRealVitalsTimestamp');
+            let lastLatestMs = lastLatestStr ? parseInt(lastLatestStr, 10) : 0;
+            
+            let isVitalsEmptyOrStale = false;
+            
             if (vitals.length === 0) {
-                return { success: true, message: 'Nu sunt date noi valide de sincronizat.' };
+               isVitalsEmptyOrStale = true;
+            } else {
+               // Extragem the max timestamp din payloadul real
+               const currentMaxMs = Math.max(...vitals.map(v => new Date(v.timestamp).getTime()));
+               
+               if (currentMaxMs <= lastLatestMs) {
+                   // Datele sunt absolut la fel ca la minutul trecut (Health Connect n-a syncuit un update pe device)
+                   isVitalsEmptyOrStale = true;
+               } else {
+                   // Avem date fresh
+                   await AsyncStorage.setItem('lastRealVitalsTimestamp', currentMaxMs.toString());
+               }
+            }
+
+            // Dacă HC nu ne dă nimic valabil SAU nimic fresh în acest ultim interval, generăm noi automat MOCK DATA.
+            if (isVitalsEmptyOrStale) {
+                console.log(`[Mobil-Log] Health Connect nu are date **NOI**. Se generează date MOCK...`);
+                const currentTime = new Date().toISOString();
+                
+                vitals = [
+                    { type: 'heart_rate', value: Math.floor(70 + Math.random() * 20), unit: 'bpm', timestamp: currentTime, isMock: true },
+                    { type: 'respiratory_rate', value: Math.floor(14 + Math.random() * 6), unit: 'rpm', timestamp: currentTime, isMock: true },
+                    { type: 'skin_temperature', value: parseFloat((36 + Math.random() * 1.5).toFixed(1)), unit: 'C', timestamp: currentTime, isMock: true }
+                ];
+                
+                // Pentru a testa alertele sistemului de AI ocazional generam si niste spike-uri false dacă Math.random > 0.8
+                if (Math.random() > 0.8) {
+                    console.log(`[Mobil-Log] Generăm un spike critic MOCK (pentru AI) !`);
+                    vitals[0].value = 120 + Math.floor(Math.random() * 20); // Puls alarmant
+                }
+            } else {
+                console.log(`[Mobil-Log] Avem ${vitals.length} înregistrări REALE. Se trimit...`);
+                // Dacă avem date reale de la HC le marcam clar cu isMock false
+                vitals = vitals.map(v => ({ ...v, isMock: false }));
             }
 
             onLog(`Trimitem ${vitals.length} măsurători unice spre server (format Time-Series)...`);

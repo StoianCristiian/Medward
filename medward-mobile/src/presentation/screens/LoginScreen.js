@@ -33,6 +33,7 @@ export default function LoginScreen({ navigation }) {
             if (res.data.success) {
                 await AsyncStorage.setItem('userToken', res.data.token);
                 await AsyncStorage.setItem('userRole', res.data.user.role);
+                await AsyncStorage.setItem('userId', res.data.user._id);
                 // Salvăm și datele de profil
                 await AsyncStorage.setItem('userName', res.data.user.name || '');
                 await AsyncStorage.setItem('userEmail', res.data.user.email || '');

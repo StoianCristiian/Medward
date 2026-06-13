@@ -21,6 +21,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.stoiancristian.medward",
+      "googleServicesFile": "./google-services.json",
       "usesCleartextTraffic": true,
       "permissions": [
         "android.permission.health.READ_HEART_RATE"
@@ -48,7 +49,8 @@
         }
       ],
       "expo-web-browser",
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin",
+      "expo-background-task"
     ],
     "extra": {
       "eas": {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Animated, Linking, Alert } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Animated, Linking, Alert, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import HealthConnectAdapter from '../../infrastructure/health_connect/HealthConnectAdapter';
@@ -13,11 +13,11 @@ const syncVitalsDataUseCase = new SyncVitalsData(healthConnectAdapter, backendAp
 export default function PatientHomeScreen() {
     const [isMonitoring, setIsMonitoring] = useState(false);
     const [lastSync, setLastSync] = useState(null);
+    const [counter, setCounter] = useState(0); // State pt fortarea UI update-ului la fiecare secundă
     const [userName, setUserName] = useState('');
-    const [tasks, setTasks] = useState([
-        { id: 1, name: 'Paracetamol', time: '14:00', done: false },
-        { id: 2, name: 'Vitamina C', time: '20:00', done: false }
-    ]);
+    const [tasks, setTasks] = useState([]);
+    const [userId, setUserId] = useState(null);
+    const [refreshing, setRefreshing] = useState(false);
     
     // Animație blândă pentru inima de sincronizare
     const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -30,15 +30,26 @@ export default function PatientHomeScreen() {
         // Citim numele utilizatorului din AsyncStorage
         const fetchUserData = async () => {
             const name = await AsyncStorage.getItem('userName');
+            const storedUserId = await AsyncStorage.getItem('userId');
             if (name) {
                 // Afișăm doar prenumele (primul cuvânt)
                 setUserName(name.split(' ')[0]);
             }
+            if (storedUserId) {
+                setUserId(storedUserId);
+                loadTreatments(storedUserId);
+            }
         };
         fetchUserData();
 
+        // Ticker pt secunde
+        const timer = setInterval(() => {
+             setCounter(c => c + 1);
+        }, 1000);
+
         return () => {
             if (monitoringInterval.current) clearInterval(monitoringInterval.current);
+            clearInterval(timer);
         };
     }, []);
 
@@ -54,6 +65,24 @@ export default function PatientHomeScreen() {
             Animated.timing(pulseAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
         }
     }, [isMonitoring]);
+
+    const loadTreatments = async (id) => {
+        try {
+            const result = await backendApiAdapter.getTreatments(id);
+            if (result.success && result.treatments) {
+                // Map the treatments according to what the UI expects (id, name, time, done)
+                const mappedTasks = result.treatments.map(t => ({
+                    id: t._id,
+                    name: t.medicationName,
+                    time: t.frequency, // momentan afișăm frecvența în loc de oră dacă e hardcodată
+                    done: false, // temporar, neimplementat complet statusul pe backend pe zi curentă
+                }));
+                setTasks(mappedTasks);
+            }
+        } catch (error) {
+            console.error("Eroare incarcare tratamente:", error);
+        }
+    };
 
     const handleSync = async () => {
         // Pasiv, nu afișăm logs pe UI decât data ultimei sincronizări
@@ -72,8 +101,17 @@ export default function PatientHomeScreen() {
             handleSync();
             monitoringInterval.current = setInterval(() => {
                 handleSync();
-            }, 30000); // 30 secunde
+            }, 60000); // 1 minut
         }
+    };
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        if (userId) {
+            await loadTreatments(userId);
+        }
+        await handleSync();
+        setRefreshing(false);
     };
 
     const confirmTask = (id) => {
@@ -94,7 +132,12 @@ export default function PatientHomeScreen() {
     const todayString = new Date().toLocaleDateString('ro-RO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
     return (
-        <ScrollView style={styles.container}>
+        <ScrollView 
+            style={styles.container}
+            refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#48bb78"]} />
+            }
+        >
             <View style={styles.header}>
                 <Text style={styles.date}>{todayString}</Text>
                 <Text style={styles.title}>Salut, {userName || 'Utilizator'}!</Text>
@@ -109,7 +152,9 @@ export default function PatientHomeScreen() {
                             {isMonitoring ? "Conexiune stabilă. Medicul primește date." : "Monitorizare oprită. Apasă pentru a porni."}
                         </Text>
                         {lastSync && isMonitoring && (
-                            <Text style={styles.lastSyncText}>Ultimul transfer: acum {Math.floor((new Date() - lastSync) / 60000)} min.</Text>
+                            <Text style={styles.lastSyncText}>
+                                Ultimul transfer: acum {Math.floor((new Date() - lastSync) / 1000)} secunde
+                            </Text>
                         )}
                     </View>
                     <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
@@ -130,22 +175,28 @@ export default function PatientHomeScreen() {
                 <Text style={styles.cardTitle}>Planul de Azi</Text>
                 <Text style={styles.syncDesc}>Medicație și sarcini de efectuat</Text>
 
-                {tasks.map(task => (
-                    <View key={task.id} style={styles.taskRow}>
-                        <View style={styles.taskInfo}>
-                            <Ionicons name={task.done ? "checkmark-circle" : "medical"} size={24} color={task.done ? "#48bb78" : "#3182ce"} />
-                            <View style={{marginLeft: 10}}>
-                                <Text style={[styles.taskName, task.done && styles.taskDone]}>{task.name}</Text>
-                                <Text style={styles.taskTime}>Ora: {task.time}</Text>
+                {tasks.length === 0 ? (
+                    <Text style={{ marginTop: 15, color: '#718096', fontStyle: 'italic' }}>
+                        Niciun tratament planificat.
+                    </Text>
+                ) : (
+                    tasks.map(task => (
+                        <View key={task.id} style={styles.taskRow}>
+                            <View style={styles.taskInfo}>
+                                <Ionicons name={task.done ? "checkmark-circle" : "medical"} size={24} color={task.done ? "#48bb78" : "#3182ce"} />
+                                <View style={{marginLeft: 10}}>
+                                    <Text style={[styles.taskName, task.done && styles.taskDone]}>{task.name}</Text>
+                                    <Text style={styles.taskTime}>Frecvență: {task.time}</Text>
+                                </View>
                             </View>
+                            {!task.done && (
+                                <TouchableOpacity style={styles.confirmButton} onPress={() => confirmTask(task.id)}>
+                                    <Text style={styles.confirmText}>Confirmă</Text>
+                                </TouchableOpacity>
+                            )}
                         </View>
-                        {!task.done && (
-                            <TouchableOpacity style={styles.confirmButton} onPress={() => confirmTask(task.id)}>
-                                <Text style={styles.confirmText}>Confirmă</Text>
-                            </TouchableOpacity>
-                        )}
-                    </View>
-                ))}
+                    ))
+                )}
             </View>
 
             {/* Buton SOS */}

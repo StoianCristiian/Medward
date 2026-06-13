@@ -27,7 +27,8 @@ const userSchema = new mongoose.Schema({
     monitoredPatients: [{           // Lista de pascienți pe care Warden-ul are voie să îi monitorizeze
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'User' 
-    }]
+    }],
+    expoPushToken: String           // Token pentru notificări Push
 }, { timestamps: true });
 
 const UserModel = mongoose.model('User', userSchema);

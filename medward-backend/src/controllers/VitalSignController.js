@@ -1,4 +1,5 @@
 const VitalSignModel = require('../infrastructure/database/VitalSignModel');
+const AiAnalyzerService = require('../infrastructure/services/AiAnalyzerService');
 
 class VitalSignController {
     // [Pacient] Primește și salvează date de la telefon
@@ -17,7 +18,8 @@ class VitalSignController {
                 type: v.type,
                 value: v.value,
                 unit: v.unit,
-                timestamp: new Date(v.timestamp)
+                timestamp: new Date(v.timestamp),
+                isMock: v.isMock || false
             }));
 
             // Optimizare: Extragem datele preexistente din baza de date folosind timestamps
@@ -39,9 +41,21 @@ class VitalSignController {
 
             // Inserare rapidă (bulk) în MongoDB doar a intrărilor cu adevărat noi
             if (newVitalsToSave.length > 0) {
+                // Dacă avem date REALE (isMock == false) venite de la telefon, putem șterge datele fake anterioare din baza de date
+                const hasRealData = newVitalsToSave.some(v => v.isMock === false);
+                if (hasRealData) {
+                    await VitalSignModel.deleteMany({ patientId, isMock: true });
+                }
+
                 await VitalSignModel.insertMany(newVitalsToSave);
+                console.log(`[Backend] Pacient ${patientId}: Inserate ${newVitalsToSave.length} înregistrări (Duplicate evitate: ${vitalsToSave.length - newVitalsToSave.length}).`);
+                
+                // Chemăm modelul de AI în background (asincron) să verifice noile semne
+                AiAnalyzerService.analyzeAndNotify(patientId, newVitalsToSave).catch(e => console.error(e));
+
                 res.status(201).json({ success: true, message: `Acum am adăugat ${newVitalsToSave.length} din ${vitals.length} date trimise (s-au exclus duplicatele).` });
             } else {
+                console.log(`[Backend] Pacient ${patientId}: Toate cele ${vitals.length} au fost refuzate deoarece erau deja in sistem (0 noi).`);
                 res.status(200).json({ success: true, message: `Toate cele ${vitals.length} înregistrări erau deja sincronizate.` });
             }
         } catch (error) {

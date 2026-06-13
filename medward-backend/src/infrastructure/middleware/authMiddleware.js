@@ -18,6 +18,7 @@ const requireAuth = async (req, res, next) => {
         // Căutăm userul în DB pentru a avea mereu datele (și rolul) actualizate
         const user = await UserModel.findById(decoded.userId);
         if (!user) {
+            console.error('[AuthMiddleware] Utilizatorul nu exista in baza de date. ID:', decoded.userId);
             return res.status(401).json({ success: false, message: 'Utilizatorul nu există' });
         }
 
@@ -25,6 +26,7 @@ const requireAuth = async (req, res, next) => {
         req.user = user;
         next();
     } catch (error) {
+        console.error('[AuthMiddleware] Eroare verificare token:', error.message);
         return res.status(401).json({ success: false, message: 'Token invalid sau expirat' });
     }
 };

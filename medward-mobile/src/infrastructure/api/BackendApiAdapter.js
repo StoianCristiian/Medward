@@ -74,6 +74,16 @@ class BackendApiAdapter extends BackendRepository {
         const response = await axios.get(`${BASE_URL}/treatments/${patientId}`, { headers });
         return response.data;
     }
+
+    // ============================================
+    // Integrare notificari Push
+    // ============================================
+
+    async updatePushToken(token) {
+        const headers = await this._getHeaders();
+        const response = await axios.post(`${BASE_URL}/auth/push-token`, { token }, { headers });
+        return response.data;
+    }
 }
 
 export default BackendApiAdapter;

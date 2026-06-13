@@ -62,4 +62,16 @@ router.post('/set-role', requireAuth, async (req, res) => {
     }
 });
 
+// [Warden] Rută pentru setarea tokenului Expo Push
+router.post('/push-token', requireAuth, async (req, res) => {
+    try {
+        const { token } = req.body;
+        req.user.expoPushToken = token;
+        await req.user.save();
+        res.status(200).json({ success: true, message: 'Push token actualizat' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Eroare la actualizarea push token' });
+    }
+});
+
 module.exports = router;

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import BackendApiAdapter from '../../infrastructure/api/BackendApiAdapter';
 
@@ -11,6 +11,7 @@ export default function WardenMonitorScreen({ navigation }) {
     const [selectedPatient, setSelectedPatient] = useState(null);
     const [vitalsData, setVitalsData] = useState([]);
     const [vitalsLoading, setVitalsLoading] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
         const unsubscribe = navigation.addListener('focus', () => {
@@ -21,19 +22,22 @@ export default function WardenMonitorScreen({ navigation }) {
     }, [navigation]);
 
     const fetchPatients = async () => {
-        setLoading(true);
+        setRefreshing(true);
         try {
             const data = await backendApiAdapter.getMonitoredPatients();
             if (data.success && data.patients) {
                 setPatients(data.patients);
                 if (data.patients.length > 0 && !selectedPatient) {
                     handleSelectPatient(data.patients[0]);
+                } else if (selectedPatient) {
+                    handleSelectPatient(selectedPatient);
                 }
             }
         } catch (error) {
             console.log("Eroare fetch patients", error);
         }
         setLoading(false);
+        setRefreshing(false);
     };
 
     const handleSelectPatient = async (patient) => {
@@ -97,7 +101,12 @@ export default function WardenMonitorScreen({ navigation }) {
                     <Text style={styles.emptySub}>Mergi la 'Profil' pentru a adăuga un pacient via cod.</Text>
                 </View>
             ) : (
-                <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
+                <ScrollView 
+                    contentContainerStyle={{ paddingBottom: 30 }}
+                    refreshControl={
+                        <RefreshControl refreshing={refreshing} onRefresh={fetchPatients} colors={["#48bb78"]} />
+                    }
+                >
                     
                     {/* Lista Orizontală de pacienți */}
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.patientSelectorRow}>

@@ -16,6 +16,11 @@ yarn-error.log*
 coverage/
 .nyc_output/
 
+# Firebase / Secret Keys
+*.json
+!package.json
+!package-lock.json
+
 # IDE / Editor (dacă deschizi doar folderul backend)
 .vscode/
 .idea/

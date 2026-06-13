@@ -22,6 +22,10 @@ const vitalSignSchema = new mongoose.Schema({
     timestamp: {
         type: Date,
         required: true
+    },
+    isMock: {
+        type: Boolean,
+        default: false
     }
 }, { 
     // Optimizare MongoDB Time-Series (necesită MongoDB >= 5.0)

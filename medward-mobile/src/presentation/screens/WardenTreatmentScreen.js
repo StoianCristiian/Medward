@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, TextInput, Alert, ActivityIndicator, Modal, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import BackendApiAdapter from '../../infrastructure/api/BackendApiAdapter';
 
@@ -12,6 +12,13 @@ export default function WardenTreatmentScreen({ navigation }) {
     const [treatments, setTreatments] = useState([]);
     const [treatmentsLoading, setTreatmentsLoading] = useState(false);
 
+    // Stare pentru modalul de medicație nouă (Android friendly)
+    const [isModalVisible, setModalVisible] = useState(false);
+    const [newMedName, setNewMedName] = useState('');
+    const [newMedDosage, setNewMedDosage] = useState('');
+    const [newMedFrequency, setNewMedFrequency] = useState('');
+    const [refreshing, setRefreshing] = useState(false);
+
     useEffect(() => {
         const unsubscribe = navigation.addListener('focus', () => {
             fetchPatients();
@@ -21,18 +28,22 @@ export default function WardenTreatmentScreen({ navigation }) {
     }, [navigation]);
 
     const fetchPatients = async () => {
-        setLoading(true);
+        setRefreshing(true);
         try {
             const data = await backendApiAdapter.getMonitoredPatients();
             if (data.success && data.patients) {
                 setPatients(data.patients);
                 if (data.patients.length > 0 && !selectedPatient) {
                     handleSelectPatient(data.patients[0]);
+                } else if (selectedPatient) {
+                    // Update current selected patient if already selected
+                    handleSelectPatient(selectedPatient);
                 }
             }
         } catch (error) {
             console.log("Eroare fetch patients", error);
         }
+        setRefreshing(false);
         setLoading(false);
     };
 
@@ -50,37 +61,73 @@ export default function WardenTreatmentScreen({ navigation }) {
         setTreatmentsLoading(false);
     };
 
-    const handleAddTreatment = async () => {
+    const submitNewTreatment = async () => {
+        if (!newMedName.trim()) {
+            Alert.alert("Eroare", "Numele medicamentului nu poate fi gol.");
+            return;
+        }
+        
+        try {
+            const res = await backendApiAdapter.addTreatment(selectedPatient._id, {
+                medicationName: newMedName,
+                dosage: newMedDosage || "1",
+                frequency: newMedFrequency || "Zilnic, ora 08:00",
+                stock: 30
+            });
+            if (res.success) {
+                setNewMedName('');
+                setNewMedDosage('');
+                setNewMedFrequency('');
+                setModalVisible(false);
+                handleSelectPatient(selectedPatient); // refresh treatments
+            }
+        } catch (e) {
+            Alert.alert("Eroare", "Nu s-a putut adăuga tratamentul.");
+        }
+    };
+
+    const handleAddTreatment = () => {
         if (!selectedPatient) return Alert.alert("Eroare", "Selectează un pacient.");
-        Alert.prompt(
-            "Medicație Nouă",
-            "Introduceți numele medicamentului (ex: Nurofen 500mg)",
-            [
-                { text: "Anulare", style: "cancel" },
-                {
-                    text: "Adaugă",
-                    onPress: async (name) => {
-                        if (!name) return;
-                        try {
-                            const res = await backendApiAdapter.addTreatment(selectedPatient._id, {
-                                medicationName: name,
-                                frequency: "Zilnic, ora 08:00",
-                                stock: 30
-                            });
-                            if (res.success) {
-                                handleSelectPatient(selectedPatient);
-                            }
-                        } catch (e) {
-                            Alert.alert("Eroare", "Nu s-a putut adăuga tratamentul.");
-                        }
-                    }
-                }
-            ]
-        );
+        setModalVisible(true);
     };
 
     return (
         <View style={styles.container}>
+            {/* --- MODAL ADAUGARE MEDICAMENT (pt Android) --- */}
+            <Modal visible={isModalVisible} transparent animationType="slide">
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>Medicație Nouă</Text>
+                        <TextInput 
+                            style={styles.modalInput}
+                            placeholder="Nume (ex: Nurofen)"
+                            value={newMedName}
+                            onChangeText={setNewMedName}
+                        />
+                        <TextInput 
+                            style={styles.modalInput}
+                            placeholder="Dozaj/Cantitate (ex: 500mg, 1 pastila)"
+                            value={newMedDosage}
+                            onChangeText={setNewMedDosage}
+                        />
+                        <TextInput 
+                            style={styles.modalInput}
+                            placeholder="Ora / Frecvență (ex: 08:00 și 20:00)"
+                            value={newMedFrequency}
+                            onChangeText={setNewMedFrequency}
+                        />
+                        <View style={styles.modalActions}>
+                            <TouchableOpacity style={styles.modalBtnCancel} onPress={() => setModalVisible(false)}>
+                                <Text style={styles.modalBtnTextCancel}>Anulare</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.modalBtnAdd} onPress={submitNewTreatment}>
+                                <Text style={styles.modalBtnTextAdd}>Adaugă</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
             <View style={styles.header}>
                 <Text style={styles.title}>Prescripții & Tratament</Text>
             </View>
@@ -93,7 +140,12 @@ export default function WardenTreatmentScreen({ navigation }) {
                     <Text style={{fontSize: 18, fontWeight: 'bold', color: '#4a5568', marginTop: 15}}>Nu ai niciun pacient asociat.</Text>
                 </View>
             ) : (
-                <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
+                <ScrollView 
+                    contentContainerStyle={{ paddingBottom: 30 }}
+                    refreshControl={
+                        <RefreshControl refreshing={refreshing} onRefresh={fetchPatients} colors={["#48bb78"]} />
+                    }
+                >
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.patientSelectorRow}>
                         {patients.map(p => {
                             const isSelected = selectedPatient?._id === p._id;
@@ -135,7 +187,8 @@ export default function WardenTreatmentScreen({ navigation }) {
                                         <TouchableOpacity><Ionicons name="ellipsis-horizontal" size={20} color="#a0aec0" /></TouchableOpacity>
                                     </View>
                                     <View style={styles.rulesContainer}>
-                                        <Text style={styles.ruleText}>Frecvență: {t.frequency}</Text>
+                                        <Text style={styles.ruleText}>Frecvență / Ora: {t.frequency}</Text>
+                                        <Text style={styles.ruleText}>Dozaj / Cantitate: {t.dosage || "-"}</Text>
                                         <Text style={styles.ruleText}>Stoc rămas: {t.stock} unități</Text>
                                     </View>
                                     <View style={styles.complianceTracker}>
@@ -164,6 +217,17 @@ const styles = StyleSheet.create({
 
     addButton: { backgroundColor: '#48bb78', padding: 15, borderRadius: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 25, shadowColor: '#48bb78', shadowOffset: { width:0, height:4 }, shadowOpacity: 0.3, shadowRadius: 5 },
     addText: { color: 'white', fontWeight: 'bold', fontSize: 16, marginLeft: 10 },
+
+    // Stiluri pentru Modal
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+    modalContent: { width: '85%', backgroundColor: 'white', padding: 20, borderRadius: 16, elevation: 5 },
+    modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, color: '#2d3748' },
+    modalInput: { backgroundColor: '#edf2f7', padding: 15, borderRadius: 8, fontSize: 16, marginBottom: 20 },
+    modalActions: { flexDirection: 'row', justifyContent: 'flex-end' },
+    modalBtnCancel: { padding: 10, marginRight: 10 },
+    modalBtnTextCancel: { color: '#718096', fontSize: 16, fontWeight: '600' },
+    modalBtnAdd: { backgroundColor: '#3182ce', padding: 10, paddingHorizontal: 20, borderRadius: 8 },
+    modalBtnTextAdd: { color: 'white', fontSize: 16, fontWeight: 'bold' },
 
     sectionTitle: { fontSize: 14, fontWeight: 'bold', color: '#718096', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 15 },
     

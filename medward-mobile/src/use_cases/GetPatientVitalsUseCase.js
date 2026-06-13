@@ -9,7 +9,7 @@ class GetPatientVitalsUseCase {
         try {
             if (!patientId) throw new Error('ID-ul pacientului este obligatoriu.');
 
-            console.log(`📡 Descărcăm fișa medicală a pacientului ${patientId} de pe cloud...`);
+            console.log(`📡 Descărcăm fișa medicală a pacientului ${patientId}`);
             
             // Apel de rețea autorizat cu JWT 
             const response = await this.backendRepository.getPatientVitals(patientId);
