@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
     modalContent: { width: '85%', backgroundColor: 'white', padding: 20, borderRadius: 16, elevation: 5 },
     modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, color: '#2d3748' },
-    modalInput: { backgroundColor: '#edf2f7', padding: 15, borderRadius: 8, fontSize: 16, marginBottom: 20 },
+    modalInput: { backgroundColor: 'gray', padding: 15, borderRadius: 8, fontSize: 16, marginBottom: 20 },
     modalActions: { flexDirection: 'row', justifyContent: 'flex-end' },
     modalBtnCancel: { padding: 10, marginRight: 10 },
     modalBtnTextCancel: { color: '#718096', fontSize: 16, fontWeight: '600' },
